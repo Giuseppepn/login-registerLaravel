@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::group(['prefix' => 'v1', 'namespace' => 'App\Http\Controllers\Api\V1'], function(){
     Route::apiResource('utentes', UtenteController::class);
     Route::post('login', 'UtenteController@login');
+    Route::post('verifica',  'UtenteController@leggiToken');
 },
 
 

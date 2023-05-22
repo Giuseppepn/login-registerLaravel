@@ -8,6 +8,8 @@ use Error;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 class UtenteController extends Controller
 {
@@ -37,21 +39,61 @@ class UtenteController extends Controller
      */
     public function store(Request $request)
     {
-            $utenteReg = new Utente;
-            $utenteReg->username = $request->user;
-            $utenteReg->password = Hash::make($request->password);
-            $utenteReg->email = $request->email;
 
-            $utenteReg->save();
-            $utente = $request->utente;
-            return response()->json(status: 200,data: ['OK!']);
 
 
 
         // Store the user...
 
+        try{
+            $utenteReg = new Utente;
+            if(($user = Utente::where('username', $request->user)->first()) == null)
+            {
+
+                $utenteReg->username = $request->user;
+                $utenteReg->password = Hash::make($request->password);
+                $utenteReg->email = $request->email;
+
+                $utenteReg->save();
+
+                return response()->json(status: 200,data: ['OK!']);
+            }
+            else
+            {
+                return response()->json(status: 400,data: $user);
+            }
+        }catch(Exception $e){
+            return response()->json(status: 400,data: $user);
+        }
 
     }
+
+
+    public function leggiToken(Request $request)
+    {
+        $key = env('JWT_KEY');
+
+        $token = (string) $request->token;
+        try {
+            $decoded_jwt = JWT::decode($token, new Key($key, 'HS256'));
+            return response()->json(status : 212, data : $decoded_jwt);
+        } catch (Exception $e) {
+            return response()->json(status : 400, data : $token);
+        }
+
+    }
+
+
+
+    private function creaToken($data)
+    {
+        $key = env('JWT_KEY');
+        $userData = $data->toArray();
+        $jwt = JWT::encode($userData, $key, 'HS256');
+        return $jwt;
+    }
+
+
 
     public function login(Request $request)
     {
@@ -62,13 +104,21 @@ class UtenteController extends Controller
             $request->has('user');
             if($user = Utente::where('username', $request->user)->first())
             {
+
                 if(Hash::check($request->password,$user->password))
                 {
-                    return response()->json(status: 212,data: ['Login Avvenuto!']);
+                    $data = [
+                        'user' => $user,
+                        'token' => $this->creaToken($user)
+                    ];
+
+                    return response()->json(status: 212,data: $data);
+
+
                 }
             }
         }catch(Exception $e){
-            return response()->json(status:410, data: ['ERRORE']);
+            return response()->json(status: 400,data: $user);
         }
 
 
